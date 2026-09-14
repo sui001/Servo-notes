@@ -1,0 +1,370 @@
+{
+ "sweep": [
+  {
+   "offset_us": 100,
+   "hz": 726.6,
+   "rms": 132.4,
+   "edge": false,
+   "prominence": 4.9
+  },
+  {
+   "offset_us": 110,
+   "hz": 1122.6,
+   "rms": 145.7,
+   "edge": false,
+   "prominence": 6.7
+  },
+  {
+   "offset_us": 120,
+   "hz": 818.4,
+   "rms": 174.1,
+   "edge": false,
+   "prominence": 9.1
+  },
+  {
+   "offset_us": 130,
+   "hz": 821.8,
+   "rms": 161.7,
+   "edge": false,
+   "prominence": 7.3
+  },
+  {
+   "offset_us": 140,
+   "hz": 887.7,
+   "rms": 173.3,
+   "edge": false,
+   "prominence": 16.2
+  },
+  {
+   "offset_us": 150,
+   "hz": 900.4,
+   "rms": 190.6,
+   "edge": false,
+   "prominence": 21.0
+  },
+  {
+   "offset_us": 160,
+   "hz": 960.0,
+   "rms": 215.0,
+   "edge": false,
+   "prominence": 22.6
+  },
+  {
+   "offset_us": 170,
+   "hz": 967.8,
+   "rms": 195.4,
+   "edge": false,
+   "prominence": 17.9
+  },
+  {
+   "offset_us": 180,
+   "hz": 1031.2,
+   "rms": 213.9,
+   "edge": false,
+   "prominence": 22.9
+  },
+  {
+   "offset_us": 190,
+   "hz": 1035.6,
+   "rms": 228.9,
+   "edge": false,
+   "prominence": 33.1
+  },
+  {
+   "offset_us": 200,
+   "hz": 1041.5,
+   "rms": 242.2,
+   "edge": false,
+   "prominence": 25.0
+  },
+  {
+   "offset_us": 210,
+   "hz": 1047.4,
+   "rms": 247.4,
+   "edge": false,
+   "prominence": 40.7
+  },
+  {
+   "offset_us": 220,
+   "hz": 1101.6,
+   "rms": 253.5,
+   "edge": false,
+   "prominence": 26.3
+  },
+  {
+   "offset_us": 230,
+   "hz": 1105.5,
+   "rms": 243.5,
+   "edge": false,
+   "prominence": 32.6
+  },
+  {
+   "offset_us": 240,
+   "hz": 1139.2,
+   "rms": 234.5,
+   "edge": false,
+   "prominence": 18.7
+  },
+  {
+   "offset_us": 250,
+   "hz": 1150.4,
+   "rms": 208.2,
+   "edge": false,
+   "prominence": 23.7
+  },
+  {
+   "offset_us": 260,
+   "hz": 1178.2,
+   "rms": 208.9,
+   "edge": false,
+   "prominence": 15.6
+  },
+  {
+   "offset_us": 270,
+   "hz": 1199.7,
+   "rms": 216.5,
+   "edge": false,
+   "prominence": 11.5
+  },
+  {
+   "offset_us": 280,
+   "hz": 1205.1,
+   "rms": 199.3,
+   "edge": false,
+   "prominence": 20.9
+  },
+  {
+   "offset_us": 290,
+   "hz": 1229.0,
+   "rms": 214.4,
+   "edge": false,
+   "prominence": 15.9
+  },
+  {
+   "offset_us": 300,
+   "hz": 1234.4,
+   "rms": 204.4,
+   "edge": false,
+   "prominence": 17.7
+  },
+  {
+   "offset_us": 310,
+   "hz": 1267.1,
+   "rms": 221.8,
+   "edge": false,
+   "prominence": 7.4
+  },
+  {
+   "offset_us": 320,
+   "hz": 1698.2,
+   "rms": 217.6,
+   "edge": false,
+   "prominence": 10.4
+  },
+  {
+   "offset_us": 330,
+   "hz": 1297.9,
+   "rms": 199.4,
+   "edge": false,
+   "prominence": 18.5
+  },
+  {
+   "offset_us": 340,
+   "hz": 1298.3,
+   "rms": 220.8,
+   "edge": false,
+   "prominence": 8.1
+  },
+  {
+   "offset_us": 350,
+   "hz": 1312.0,
+   "rms": 234.0,
+   "edge": false,
+   "prominence": 9.5
+  },
+  {
+   "offset_us": 360,
+   "hz": 1323.7,
+   "rms": 239.5,
+   "edge": false,
+   "prominence": 21.7
+  },
+  {
+   "offset_us": 370,
+   "hz": 1320.3,
+   "rms": 293.9,
+   "edge": false,
+   "prominence": 15.5
+  },
+  {
+   "offset_us": 380,
+   "hz": 1323.2,
+   "rms": 250.7,
+   "edge": false,
+   "prominence": 14.7
+  },
+  {
+   "offset_us": 390,
+   "hz": 1333.0,
+   "rms": 272.4,
+   "edge": false,
+   "prominence": 23.1
+  },
+  {
+   "offset_us": 400,
+   "hz": 1335.0,
+   "rms": 261.3,
+   "edge": false,
+   "prominence": 11.3
+  },
+  {
+   "offset_us": 410,
+   "hz": 1358.9,
+   "rms": 351.9,
+   "edge": false,
+   "prominence": 12.5
+  },
+  {
+   "offset_us": 420,
+   "hz": 1347.2,
+   "rms": 312.4,
+   "edge": false,
+   "prominence": 19.1
+  },
+  {
+   "offset_us": 430,
+   "hz": 1377.9,
+   "rms": 393.1,
+   "edge": false,
+   "prominence": 13.1
+  },
+  {
+   "offset_us": 440,
+   "hz": 1350.6,
+   "rms": 354.2,
+   "edge": false,
+   "prominence": 16.7
+  },
+  {
+   "offset_us": 450,
+   "hz": 1337.9,
+   "rms": 233.8,
+   "edge": false,
+   "prominence": 17.8
+  },
+  {
+   "offset_us": 460,
+   "hz": 1351.1,
+   "rms": 326.7,
+   "edge": false,
+   "prominence": 20.7
+  },
+  {
+   "offset_us": 470,
+   "hz": 1347.2,
+   "rms": 361.3,
+   "edge": false,
+   "prominence": 15.8
+  },
+  {
+   "offset_us": 480,
+   "hz": 1376.5,
+   "rms": 293.3,
+   "edge": false,
+   "prominence": 24.5
+  },
+  {
+   "offset_us": 490,
+   "hz": 1378.9,
+   "rms": 301.5,
+   "edge": false,
+   "prominence": 22.5
+  },
+  {
+   "offset_us": 500,
+   "hz": 1376.5,
+   "rms": 323.4,
+   "edge": false,
+   "prominence": 15.9
+  }
+ ],
+ "table": [
+  {
+   "offset_us": 140,
+   "hz": 887.7
+  },
+  {
+   "offset_us": 150,
+   "hz": 900.4
+  },
+  {
+   "offset_us": 160,
+   "hz": 960.0
+  },
+  {
+   "offset_us": 170,
+   "hz": 967.8
+  },
+  {
+   "offset_us": 180,
+   "hz": 1031.2
+  },
+  {
+   "offset_us": 200,
+   "hz": 1041.5
+  },
+  {
+   "offset_us": 210,
+   "hz": 1047.4
+  },
+  {
+   "offset_us": 220,
+   "hz": 1101.6
+  },
+  {
+   "offset_us": 240,
+   "hz": 1139.2
+  },
+  {
+   "offset_us": 250,
+   "hz": 1150.4
+  },
+  {
+   "offset_us": 260,
+   "hz": 1178.2
+  },
+  {
+   "offset_us": 280,
+   "hz": 1205.1
+  },
+  {
+   "offset_us": 290,
+   "hz": 1229.0
+  },
+  {
+   "offset_us": 300,
+   "hz": 1234.4
+  },
+  {
+   "offset_us": 330,
+   "hz": 1297.9
+  },
+  {
+   "offset_us": 360,
+   "hz": 1323.7
+  },
+  {
+   "offset_us": 390,
+   "hz": 1333.0
+  },
+  {
+   "offset_us": 420,
+   "hz": 1347.2
+  },
+  {
+   "offset_us": 490,
+   "hz": 1378.9
+  }
+ ],
+ "base_hz": 957.6
+}

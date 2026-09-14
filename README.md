@@ -97,6 +97,33 @@ describes the servo holding still (flatness 0.08, low lines between 47 and
 has flatness 0.55, a noise band like every other recording. Sketches now declare
 `skip_ms` in their plan, and this one declares 0.
 
+## Continuous-rotation servo (14 Sep 2026)
+
+On this part `writeMicroseconds` sets actual motor speed, and a peak below
+2 kHz follows it. It is the only place in the project a servo has shown pitch
+that can be steered.
+
+- Range, measured before each tune by sweeping 100-500 us from stop in 10 us
+  steps, turning one way: 888-1379 Hz on the last run, about 7 semitones.
+  Below about 140 us the servo is in its deadband, barely turning, and the
+  loudest bin is noise.
+- **It will not hold a note precisely.** Three attempts at the first phrase of
+  Happy Birthday put 3, 1 and 1 of 6 notes within 30 cents. Two things go wrong:
+  - The same speed command does not reliably give the same pitch. In the second
+    and third runs the G played 924 and 928 Hz at the start of the phrase, and
+    1038 and 1037 Hz later in it. Approaching that G from below in the third
+    run did not move it, so it is not simply which way the motor comes to the
+    speed.
+  - Around 1100-1650 Hz the strongest peak hops between partials within one
+    held note (1110, 1265 and 1615 Hz inside one B), so the note wavers and a
+    peak-picker cannot say what it is.
+- So: steerable pitch, not tuned pitch. Holding a note to within 30 cents would
+  need the mic in the loop, correcting the speed while the note plays.
+
+`conttest.wav` is the speed sweep that found the effect. `tune.wav`,
+`tune2.wav` and `tune3.wav` are the three attempts; the second and third have
+a `.cal.json` with the calibration sweep each one used.
+
 ## Recordings
 
 Kept as evidence, including the ones that went wrong.

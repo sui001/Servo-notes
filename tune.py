@@ -164,9 +164,12 @@ def main():
         if prev is not None and abs(hz - prev) < 1:
             # Repeated note: a short dip in pitch re-attacks it. A full stop
             # does not: the motor spins down into noise and the next note never
-            # gets back to speed in time.
+            # gets back to speed in time. Dipping before every step down was
+            # also tried, on the theory that pitch depends on which way the
+            # motor reaches a speed; the G it was meant to fix landed at 1037 Hz
+            # with the dip and 1038 without, so it is not used.
             dip = max(lo_hz, hz * 2 ** (-2 / 12))
-            ser.write(f"W {us_for(dip)}\n".encode()); listen(50); ms -= 50
+            ser.write(f"W {us_for(dip)}\n".encode()); listen(80); ms -= 80
         marks.append((len(audio) // 2, hz, ms, semi))
         ser.write(f"W {us_for(hz)}\n".encode())
         listen(ms)
