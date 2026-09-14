@@ -47,8 +47,8 @@
 #define MIC_SHIFT 16
 
 // ---- SET THIS before flashing: which servo type is wired up ----
-static const bool TEST_POSITIONAL = true;   // 0-180 deg hobby servo
-static const bool TEST_CONTINUOUS = false;  // continuous-rotation servo
+static const bool TEST_POSITIONAL = false;  // 0-180 deg hobby servo
+static const bool TEST_CONTINUOUS = true;   // continuous-rotation servo
 
 Servo servo;
 
