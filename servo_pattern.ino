@@ -1,23 +1,21 @@
 // servo_pattern.ino
 // ESP32-S3 Supermini + one positional hobby servo (SG92R). No microphone.
 //
-// A one-voice percussion sequencer. This exists because the measurement rig
-// answered its question: the servo's noise sits at a fixed ~9 kHz whatever
-// speed or distance it is commanded, it is a noise band rather than a tone,
-// and what actually varies with the command is loudness. Step size ran
-// 44/79/148/246 RMS for 1/2/3/5 degree steps. So there is no note to play and
-// no calibration table to build. There is a hit, and it has a velocity.
+// A percussion sequencer for one servo, with two voices.
 //
-// A hit is a MOVE, since the sound only exists while the servo is travelling.
-// The servo ping-pongs either side of a centre, each hit jumping to the other
-// side, which keeps it inside its travel and lets a pattern loop forever.
+// Measured first (see README): the noise sits at a fixed ~9 kHz whatever is
+// commanded, so there is no pitch to play. Two things do vary. Loudness tracks
+// move size (44/79/148/246 RMS for 1/2/3/5 degree steps), and direction changes
+// the timbre: from about 6 degrees up, an upward move is clearly brighter than a
+// downward one, like a high and a low tom. So a hit has a velocity and a voice.
 //
 // Protocol over serial at 115200, one command per line:
-//   T <bpm>      tempo, 20-400
-//   P <pattern>  x or X = hit at default velocity, 1-9 = hit at that velocity
-//                in degrees, . or - = rest. Up to 64 slots, one slot per
-//                sixteenth note.
-//   V <deg>      default velocity in degrees, 1-20
+//   T <bpm>      tempo, 20-900 (sixteenths above 750 outrun the servo)
+//   P <pattern>  one character per sixteenth, up to 64:
+//                  h  hi hit (upward move)      l  lo hit (downward move)
+//                  x  hit, alternating hi/lo    1-9 alternating hit at that velocity
+//                  .  or -  rest
+//   V <deg>      velocity in degrees, 1-20. 6-12 is where hi/lo is clearest.
 //   S            start        X  stop
 //   ?            status
 //
@@ -25,7 +23,7 @@
 
 #include <ESP32Servo.h>
 
-#define VERSION "1.0"
+#define VERSION "1.1"
 #define SERVO_PIN 8
 
 // The servo only accepts a new position once per PWM frame. Asking for hits
@@ -40,14 +38,15 @@ const int MAX_SLOTS    = 64;
 
 Servo servo;
 
-char pattern[MAX_SLOTS + 1] = "x...x...x...x...";
+char pattern[MAX_SLOTS + 1] = "l...h...l.l.h...";
 int  patternLen = 16;
 int  bpm = 120;
-int  defaultVelocity = 4;
+int  defaultVelocity = 8;
 bool running = false;
 
 int  slot = 0;
-int  dir = 1;
+int  lastDir = -1;             // so the first alternating hit goes up
+int  pos = CENTRE_ANGLE;
 uint32_t nextSlotAt = 0;
 
 uint32_t slotIntervalMs() {
@@ -67,22 +66,32 @@ void announceTiming() {
   }
 }
 
-void hit(int velocity) {
-  if (velocity < 1) velocity = 1;
-  if (velocity > MAX_VELOCITY) velocity = MAX_VELOCITY;
-  // Jump to the other side of centre. Travel per hit is the velocity, so the
-  // servo stays put on average however long the pattern runs.
-  int target = CENTRE_ANGLE + dir * (velocity / 2 + velocity % 2);
+void moveTo(int target) {
   if (target < SAFE_MIN) target = SAFE_MIN;
   if (target > SAFE_MAX) target = SAFE_MAX;
   servo.write(target);
-  dir = -dir;
+  pos = target;
+}
+
+// d = +1 for the hi voice (upward), -1 for the lo voice (downward). A run of
+// one voice walks the servo away from centre and rests walk it back, so a
+// pattern needs the odd rest or the other voice to stay inside its travel.
+// At the edge of travel a hit clamps and goes quiet rather than jumping.
+void hit(int d, int velocity) {
+  if (velocity < 1) velocity = 1;
+  if (velocity > MAX_VELOCITY) velocity = MAX_VELOCITY;
+  moveTo(pos + d * velocity);
+  lastDir = d;
 }
 
 void printStatus() {
-  Serial.printf("pattern [%s] len %d, tempo %d bpm, velocity %d, %s\n",
-                pattern, patternLen, bpm, defaultVelocity,
+  Serial.printf("pattern [%s] len %d, tempo %d bpm, velocity %d, at %d deg, %s\n",
+                pattern, patternLen, bpm, defaultVelocity, pos,
                 running ? "running" : "stopped");
+}
+
+bool validPatternChar(char c) {
+  return c=='x'||c=='X'||c=='h'||c=='H'||c=='l'||c=='L'||c=='.'||c=='-'||(c>='1'&&c<='9');
 }
 
 void handleLine(char *line) {
@@ -116,8 +125,8 @@ void handleLine(char *line) {
       int n = 0;
       for (char *p = arg; *p && n < MAX_SLOTS; p++) {
         if (*p == ' ') continue;
-        if (*p=='x'||*p=='X'||*p=='.'||*p=='-'||(*p>='1'&&*p<='9')) pattern[n++] = *p;
-        else { Serial.printf("err: bad character '%c', use x . - or 1-9\n", *p); return; }
+        if (validPatternChar(*p)) pattern[n++] = *p;
+        else { Serial.printf("err: bad character '%c', use h l x . - or 1-9\n", *p); return; }
       }
       if (n == 0) { Serial.println("err: empty pattern"); return; }
       pattern[n] = '\0';
@@ -134,7 +143,7 @@ void handleLine(char *line) {
       return;
     case 'X':
       running = false;
-      servo.write(CENTRE_ANGLE);
+      moveTo(CENTRE_ANGLE);
       Serial.println("ok stopped");
       return;
     case '?':
@@ -153,12 +162,12 @@ void setup() {
   delay(300);
 
   Serial.println("=== servo pattern sequencer v" VERSION " ===");
-  Serial.println("One-voice servo percussion, pattern over serial: T bpm, P pattern, V deg, S, X, ?");
+  Serial.println("Two-voice servo percussion (h = hi/up, l = lo/down), pattern over serial");
   Serial.println("https://github.com/sui001/Servo-notes");
 
   servo.setPeriodHertz(50);
   servo.attach(SERVO_PIN, 1000, 2000);
-  servo.write(CENTRE_ANGLE);
+  moveTo(CENTRE_ANGLE);
 
   printStatus();
   Serial.println("ok ready");
@@ -182,8 +191,11 @@ void loop() {
   if ((int32_t)(now - nextSlotAt) < 0) return;
 
   char c = pattern[slot];
-  if (c == 'x' || c == 'X')      hit(defaultVelocity);
-  else if (c >= '1' && c <= '9') hit(c - '0');
+  if (c == 'h' || c == 'H')      hit(+1, defaultVelocity);
+  else if (c == 'l' || c == 'L') hit(-1, defaultVelocity);
+  else if (c == 'x' || c == 'X') hit(-lastDir, defaultVelocity);
+  else if (c >= '1' && c <= '9') hit(-lastDir, c - '0');
+  else if (pos != CENTRE_ANGLE)  moveTo(pos + (pos < CENTRE_ANGLE ? 1 : -1));
 
   slot = (slot + 1) % patternLen;
   nextSlotAt += slotIntervalMs();

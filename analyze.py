@@ -256,8 +256,11 @@ def main():
     for ev in events:
         start = int(ev["start_ms"] / 1000.0 * sr)
         dur = int(ev["dur_ms"] / 1000.0 * sr)
-        # Skip the first ~100ms (mechanical onset transient), use the rest.
-        skip = int(0.1 * sr)
+        # Skip the mechanical onset of a long move. A sketch whose events ARE
+        # the onset (single hits) says so in its plan with skip_ms 0: a fixed
+        # 100 ms skip measured only the servo holding still after 2-12 degree
+        # moves that were over by 40 ms.
+        skip = int(plan.get("skip_ms", 100) / 1000.0 * sr)
         seg = samples[start + skip : start + dur]
         if len(seg) < 256:
             continue

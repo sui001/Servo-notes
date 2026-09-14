@@ -28,7 +28,7 @@
 #define I2S_SCK   11
 #define SERVO_PIN 8
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 // 16 kHz put Nyquist at 8 kHz, and the first real recording still had servo
 // energy climbing at that edge: +34 dB over room noise in the 6-8 kHz band with
@@ -229,7 +229,11 @@ void setup() {
 
   servo.setPeriodHertz(50);
   servo.attach(SERVO_PIN, 1000, 2000);
-  servo.write(HOME_ANGLE);
+  // On a continuous-rotation servo write(angle) is a speed, not a position:
+  // write(HOME_ANGLE) at 15 would spin it hard from boot until the first
+  // command, straight through the lead-in silence the analysis relies on.
+  if (TEST_CONTINUOUS && !TEST_POSITIONAL) servo.writeMicroseconds(1500);
+  else                                     servo.write(HOME_ANGLE);
 
   i2sInit();
   buildPlan();

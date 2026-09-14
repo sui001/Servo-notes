@@ -57,6 +57,46 @@ Measured, on clean unclipped audio:
 `servo_pattern.ino` is what follows from this: a hit, a velocity and a rhythm,
 with no note parameter, because there is no note.
 
+## Up vs down (servo_direction_test, 14 Sep 2026)
+
+Found by ear first. The sequencer alternates direction on every hit, and it
+sounded like a high and a low drum. None of the earlier tests could have caught
+this: they measured only outbound moves and discarded every return as gap
+contamination.
+
+Isolated single moves, 8 repeats each way, measured on the move burst only.
+`d` is the up/down difference divided by the spread across repeats, so above
+about 1 means the difference is bigger than the servo's own inconsistency.
+
+| move | centroid up / down | d | loudness up / down | d |
+|---|---|---|---|---|
+| 2° | 6844 / 5580 Hz | +0.7 | 161 / 152 | +0.5 |
+| 4° | 7249 / 6918 Hz | +0.6 | 156 / 167 | -0.6 |
+| 6° | 9502 / 8606 Hz | **+5.0** | 374 / 386 | -0.3 |
+| 8° | 9767 / 9013 Hz | **+7.0** | 607 / 649 | -2.6 |
+| 12° | 9087 / 8718 Hz | +1.8 | 835 / 1016 | **-3.4** |
+
+- **From 6° up, the two directions are clearly two sounds.** Up is brighter,
+  about 900 Hz higher in centroid and 2 dB stronger above 6 kHz. Down is the
+  duller, lower one, and at 12° also the louder one. At 12° the down move has a
+  resonance near 6 kHz that the up move lacks.
+- **At 2-4° there is no reliable difference.** Small moves vary more from one
+  repeat to the next than up differs from down.
+- The sequencer's `V 8` moves 8° per hit, so it was already sitting in the range
+  where the effect is strongest. That is why it was audible.
+- This is a timbre difference, hi/lo like two toms, not a pitch interval: the
+  ~9 kHz peak is the same both ways.
+- Caveat: an up move starts at centre and a down move at centre plus the move,
+  so direction and start position are measured together here. Over a few
+  degrees that is unlikely to matter, but it is not ruled out.
+
+The CSV for this run is not the measurement above. `analyze.py` skipped the
+first 100 ms of every window, and these moves peak at 40 ms, so `dirtest.csv`
+describes the servo holding still (flatness 0.08, low lines between 47 and
+300 Hz that look like room and mains hum rather than servo). The move itself
+has flatness 0.55, a noise band like every other recording. Sketches now declare
+`skip_ms` in their plan, and this one declares 0.
+
 ## Recordings
 
 Kept as evidence, including the ones that went wrong.
@@ -68,6 +108,7 @@ Kept as evidence, including the ones that went wrong.
 | `thirdtest.wav` | 32 kHz, 1 cm, gain corrected. Clean, peak 7432/32767. **This is the one the findings above come from.** |
 | `steptest.wav` | First step-size sweep. Clipped at the loudest step size; timing still usable, spectrum not. |
 | `steptest2.wav` | Step-size sweep re-run at `>>17`. Clean, peak 2694/32767. |
+| `dirtest.wav` | Up vs down, isolated 2-12° moves at `>>14`. Clean, peak 8367/32767. Findings are in the Up vs down section above; its CSV measured the servo holding still, not the moves. |
 
 Each `.wav` has a `.csv` of its per-event measurements, and every recording from
 `secondtest` on has a `.plan.json` beside it so the analysis can be re-run
