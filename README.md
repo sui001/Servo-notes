@@ -1,9 +1,9 @@
 # Servo + INMP441 note-scan test
 
 ## Wiring
-- INMP441: VDD→3V3, GND→GND, L/R→GND (left channel), WS→GPIO5, SCK→GPIO4, SD→GPIO6
-- Servo signal→GPIO7. Power the servo from its own 5V supply (not the S3's
-  regulator) and share ground with the ESP32. Avoid strapping pins 0/3/45/46.
+- INMP441: VDD→3V3, GND→GND, L/R→GND (left channel), WS→GPIO12, SCK→GPIO11, SD→GPIO13
+- Servo signal→GPIO8. For a 9g SG92R the board's own 5V pin is fine; share
+  ground with the ESP32. Avoid strapping pins 0/3/45/46.
 
 ## Flashing
 1. Arduino IDE, board = "ESP32S3 Dev Module" (or the Supermini variant if listed).

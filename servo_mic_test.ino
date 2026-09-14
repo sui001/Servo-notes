@@ -16,17 +16,17 @@
 //     (32 KB/s), but confirm your serial monitor / pyserial can hold it.
 //
 // Wiring (avoid ESP32-S3 strapping pins 0/3/45/46):
-//   INMP441   VDD->3V3  GND->GND  L/R->GND (left ch)  WS->GPIO5  SCK->GPIO4  SD->GPIO6
-//   Servo     signal->GPIO7  power from a separate 5V supply, not the S3's 3V3/5V pin,
-//             and share ground with the ESP32.
+//   INMP441   VDD->3V3  GND->GND  L/R->GND (left ch)  WS->GPIO12  SCK->GPIO11  SD->GPIO13
+//   Servo     signal->GPIO8  power from the board's 5V pin (fine for a 9g SG92R), and
+//             share ground with the ESP32.
 
 #include <ESP32Servo.h>
 #include <driver/i2s.h>
 
-#define I2S_WS    5
-#define I2S_SD    6
-#define I2S_SCK   4
-#define SERVO_PIN 7
+#define I2S_WS    12
+#define I2S_SD    13
+#define I2S_SCK   11
+#define SERVO_PIN 8
 
 #define SAMPLE_RATE 16000
 #define I2S_PORT    I2S_NUM_0
