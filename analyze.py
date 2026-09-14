@@ -130,7 +130,7 @@ def spectral_stats(segment, sr, lo=500.0):
     flatness = float(np.exp(np.mean(np.log(pos))) / np.mean(pos)) if len(pos) else None
     return peak, centroid, flatness
 
-def detect_pitch(segment, sr, fmin=60, fmax=None):
+def detect_pitch(segment, sr, fmin=60, fmax=None, threshold=0.55, min_conf=0.30):
     """Autocorrelation pitch detector.
 
     Returns (freq, confidence) or (None, 0.0) when there is no usable period.
@@ -150,22 +150,40 @@ def detect_pitch(segment, sr, fmin=60, fmax=None):
     if np.max(np.abs(seg)) < 50:  # near-silence, INMP441 16-bit-ish counts
         return None, 0.0
     windowed = seg * np.hanning(len(seg))
-    corr = np.correlate(windowed, windowed, mode="full")
-    corr = corr[len(corr) // 2:]
+    # Autocorrelation via FFT. np.correlate does this directly, which is O(n^2)
+    # and took minutes once segments reached 60k samples at 32 kHz. Same result.
+    n = 1 << (2 * len(windowed) - 1).bit_length()
+    spec = np.fft.rfft(windowed, n)
+    corr = np.fft.irfft(spec * np.conj(spec), n)[:len(windowed)]
     min_lag = max(2, int(sr / fmax))
     max_lag = int(sr / fmin)
     if max_lag >= len(corr):
         max_lag = len(corr) - 1
-    if min_lag >= max_lag or corr[0] == 0:
+    if min_lag >= max_lag or corr[0] <= 0:
         return None, 0.0
-    search = corr[min_lag:max_lag]
-    peak_off = int(np.argmax(search))
-    peak_lag = min_lag + peak_off
-    # Pinned against either edge means the search window found no interior
-    # peak, so there is no period here to report.
-    if peak_off <= 1 or peak_off >= len(search) - 2:
+
+    r = corr[:max_lag + 1] / corr[0]
+    search = r[min_lag:max_lag]
+    if len(search) < 5:
         return None, 0.0
-    return sr / peak_lag, float(search.max() / corr[0])
+
+    # Take the FIRST strong peak, not the largest. A periodic signal correlates
+    # just as well at twice its period, so the global argmax lands an octave
+    # low about as often as not: a clean 250 Hz tone came back as 125 Hz.
+    interior = np.r_[False, (search[1:-1] >= search[:-2]) & (search[1:-1] > search[2:]), False]
+    strong = interior & (search >= threshold * search.max())
+    # Peaks hard against either edge are the search window running out, not a
+    # period: broadband noise otherwise reports the lag beside zero at a
+    # confidence high enough to pass for a real reading. Skip those and keep
+    # looking, rather than giving up on the whole segment because of one.
+    idx = [i for i in np.flatnonzero(strong) if 1 < i < len(search) - 2]
+    if not idx:
+        return None, 0.0
+    peak_off = int(idx[0])
+    conf = float(search[peak_off])
+    if conf < min_conf:
+        return None, 0.0
+    return sr / (min_lag + peak_off), conf
 
 def main():
     if len(sys.argv) < 3:
@@ -173,11 +191,32 @@ def main():
         sys.exit(1)
     port, prefix = sys.argv[1], sys.argv[2]
 
-    ser = serial.Serial(port, 921600, timeout=5)
-    print("Resetting board...", flush=True)
-    reset_board(ser)
-    print("Waiting for test plan...", flush=True)
-    plan, leftover = read_plan(ser)
+    # A read started while the port is still re-enumerating (right after a
+    # flash) can lose a byte mid-plan, which surfaces as a JSON error rather
+    # than as the dropped byte it is. Retry rather than dying.
+    #
+    # Each attempt reopens the port. Pulsing DTR/RTS on a connection that is
+    # already mid-stream does not reliably reset this board, so retries would
+    # otherwise just read more of the audio already in flight and time out
+    # waiting for a plan that was never going to be printed again.
+    ser = None
+    for attempt in range(1, 4):
+        if ser is not None:
+            ser.close()
+            time.sleep(1.0)
+        ser = serial.Serial(port, 921600, timeout=5)
+        print(f"Resetting board (attempt {attempt})...", flush=True)
+        ser.reset_input_buffer()
+        reset_board(ser)
+        print("Waiting for test plan...", flush=True)
+        try:
+            plan, leftover = read_plan(ser)
+            break
+        except (json.JSONDecodeError, RuntimeError) as exc:
+            first = str(exc).split(". Last bytes")[0]
+            print(f"  plan unreadable ({first}); retrying", flush=True)
+            if attempt == 3:
+                raise
     events = plan["events"]
     total_ms = plan["total_ms"]
     sr = int(plan.get("sample_rate", SAMPLE_RATE))
