@@ -1,0 +1,358 @@
+{
+ "sweep": [
+  {
+   "offset_us": 100,
+   "hz": 1038.1,
+   "rms": 152.8,
+   "edge": false,
+   "prominence": 3.8
+  },
+  {
+   "offset_us": 110,
+   "hz": 1122.1,
+   "rms": 149.1,
+   "edge": false,
+   "prominence": 5.7
+  },
+  {
+   "offset_us": 120,
+   "hz": 1285.6,
+   "rms": 171.7,
+   "edge": false,
+   "prominence": 6.9
+  },
+  {
+   "offset_us": 130,
+   "hz": 821.3,
+   "rms": 174.0,
+   "edge": false,
+   "prominence": 5.5
+  },
+  {
+   "offset_us": 140,
+   "hz": 891.1,
+   "rms": 194.4,
+   "edge": false,
+   "prominence": 16.1
+  },
+  {
+   "offset_us": 150,
+   "hz": 899.4,
+   "rms": 197.7,
+   "edge": false,
+   "prominence": 15.7
+  },
+  {
+   "offset_us": 160,
+   "hz": 952.6,
+   "rms": 216.3,
+   "edge": false,
+   "prominence": 17.4
+  },
+  {
+   "offset_us": 170,
+   "hz": 966.8,
+   "rms": 211.0,
+   "edge": false,
+   "prominence": 19.3
+  },
+  {
+   "offset_us": 180,
+   "hz": 1031.2,
+   "rms": 236.9,
+   "edge": false,
+   "prominence": 21.1
+  },
+  {
+   "offset_us": 190,
+   "hz": 1038.1,
+   "rms": 222.7,
+   "edge": false,
+   "prominence": 35.4
+  },
+  {
+   "offset_us": 200,
+   "hz": 1047.4,
+   "rms": 242.0,
+   "edge": false,
+   "prominence": 35.6
+  },
+  {
+   "offset_us": 210,
+   "hz": 1090.3,
+   "rms": 238.4,
+   "edge": false,
+   "prominence": 27.9
+  },
+  {
+   "offset_us": 220,
+   "hz": 1100.6,
+   "rms": 257.0,
+   "edge": false,
+   "prominence": 39.0
+  },
+  {
+   "offset_us": 230,
+   "hz": 1099.6,
+   "rms": 252.5,
+   "edge": false,
+   "prominence": 31.6
+  },
+  {
+   "offset_us": 240,
+   "hz": 1140.1,
+   "rms": 230.9,
+   "edge": false,
+   "prominence": 35.0
+  },
+  {
+   "offset_us": 250,
+   "hz": 1142.6,
+   "rms": 236.2,
+   "edge": false,
+   "prominence": 27.1
+  },
+  {
+   "offset_us": 260,
+   "hz": 1174.3,
+   "rms": 190.2,
+   "edge": false,
+   "prominence": 19.5
+  },
+  {
+   "offset_us": 270,
+   "hz": 1147.9,
+   "rms": 198.0,
+   "edge": false,
+   "prominence": 14.6
+  },
+  {
+   "offset_us": 280,
+   "hz": 1197.8,
+   "rms": 205.9,
+   "edge": false,
+   "prominence": 14.7
+  },
+  {
+   "offset_us": 290,
+   "hz": 1230.0,
+   "rms": 201.0,
+   "edge": false,
+   "prominence": 20.5
+  },
+  {
+   "offset_us": 300,
+   "hz": 1234.4,
+   "rms": 209.4,
+   "edge": false,
+   "prominence": 15.7
+  },
+  {
+   "offset_us": 310,
+   "hz": 1263.7,
+   "rms": 217.9,
+   "edge": false,
+   "prominence": 11.3
+  },
+  {
+   "offset_us": 320,
+   "hz": 1688.5,
+   "rms": 226.0,
+   "edge": false,
+   "prominence": 10.0
+  },
+  {
+   "offset_us": 330,
+   "hz": 1283.7,
+   "rms": 225.6,
+   "edge": false,
+   "prominence": 13.6
+  },
+  {
+   "offset_us": 340,
+   "hz": 1299.8,
+   "rms": 204.7,
+   "edge": false,
+   "prominence": 21.3
+  },
+  {
+   "offset_us": 350,
+   "hz": 1307.1,
+   "rms": 218.0,
+   "edge": false,
+   "prominence": 14.5
+  },
+  {
+   "offset_us": 360,
+   "hz": 1312.0,
+   "rms": 219.0,
+   "edge": false,
+   "prominence": 13.9
+  },
+  {
+   "offset_us": 370,
+   "hz": 1313.5,
+   "rms": 209.6,
+   "edge": false,
+   "prominence": 22.9
+  },
+  {
+   "offset_us": 380,
+   "hz": 1308.1,
+   "rms": 221.9,
+   "edge": false,
+   "prominence": 9.5
+  },
+  {
+   "offset_us": 390,
+   "hz": 1307.1,
+   "rms": 225.3,
+   "edge": false,
+   "prominence": 9.4
+  },
+  {
+   "offset_us": 400,
+   "hz": 1302.2,
+   "rms": 209.2,
+   "edge": false,
+   "prominence": 19.4
+  },
+  {
+   "offset_us": 410,
+   "hz": 1303.7,
+   "rms": 225.2,
+   "edge": false,
+   "prominence": 8.8
+  },
+  {
+   "offset_us": 420,
+   "hz": 1317.9,
+   "rms": 231.2,
+   "edge": false,
+   "prominence": 13.4
+  },
+  {
+   "offset_us": 430,
+   "hz": 1323.2,
+   "rms": 212.1,
+   "edge": false,
+   "prominence": 22.0
+  },
+  {
+   "offset_us": 440,
+   "hz": 1314.5,
+   "rms": 228.9,
+   "edge": false,
+   "prominence": 12.3
+  },
+  {
+   "offset_us": 450,
+   "hz": 1309.6,
+   "rms": 232.3,
+   "edge": false,
+   "prominence": 12.3
+  },
+  {
+   "offset_us": 460,
+   "hz": 1313.5,
+   "rms": 223.0,
+   "edge": false,
+   "prominence": 17.8
+  },
+  {
+   "offset_us": 470,
+   "hz": 1321.3,
+   "rms": 236.4,
+   "edge": false,
+   "prominence": 13.3
+  },
+  {
+   "offset_us": 480,
+   "hz": 1324.2,
+   "rms": 229.3,
+   "edge": false,
+   "prominence": 17.4
+  },
+  {
+   "offset_us": 490,
+   "hz": 1340.3,
+   "rms": 259.7,
+   "edge": false,
+   "prominence": 16.6
+  },
+  {
+   "offset_us": 500,
+   "hz": 1349.1,
+   "rms": 345.7,
+   "edge": false,
+   "prominence": 13.9
+  }
+ ],
+ "table": [
+  {
+   "offset_us": 140,
+   "hz": 891.1
+  },
+  {
+   "offset_us": 150,
+   "hz": 899.4
+  },
+  {
+   "offset_us": 160,
+   "hz": 952.6
+  },
+  {
+   "offset_us": 170,
+   "hz": 966.8
+  },
+  {
+   "offset_us": 180,
+   "hz": 1031.2
+  },
+  {
+   "offset_us": 190,
+   "hz": 1038.1
+  },
+  {
+   "offset_us": 200,
+   "hz": 1047.4
+  },
+  {
+   "offset_us": 210,
+   "hz": 1090.3
+  },
+  {
+   "offset_us": 220,
+   "hz": 1100.6
+  },
+  {
+   "offset_us": 240,
+   "hz": 1140.1
+  },
+  {
+   "offset_us": 260,
+   "hz": 1174.3
+  },
+  {
+   "offset_us": 290,
+   "hz": 1230.0
+  },
+  {
+   "offset_us": 340,
+   "hz": 1299.8
+  },
+  {
+   "offset_us": 370,
+   "hz": 1313.5
+  },
+  {
+   "offset_us": 430,
+   "hz": 1323.2
+  },
+  {
+   "offset_us": 490,
+   "hz": 1340.3
+  }
+ ],
+ "base_hz": 945.9
+}
