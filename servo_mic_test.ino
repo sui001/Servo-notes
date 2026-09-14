@@ -43,8 +43,9 @@ const int stepDelays[] = {0, 5, 10, 20};                        // ms/degree; 0 
 const int contSpeeds[] = {50, 100, 150, 200, 300, 400, 500};    // us offset from 1500 (stop), both directions
 const int REPEATS = 3;
 
-const uint32_t MOVE_WINDOW_MS = 700;   // analysis window per event
-const uint32_t GAP_MS         = 900;   // silence between events
+const uint32_t MOVE_WINDOW_MS = 700;   // minimum analysis window per event
+const uint32_t GAP_MS         = 900;   // silence after the window, covers the return move
+const uint32_t SETTLE_MS      = 100;   // margin either side of a move
 
 // Home sits near one end of travel so HOME_ANGLE + max(distances) stays inside
 // the servo's range. At the old HOME_ANGLE of 90 the three largest distances
@@ -104,9 +105,18 @@ void buildPlan() {
           int target = HOME_ANGLE + distances[d];
           int stepDelay = stepDelays[s];
 
+          // A stepped move takes distance x stepDelay ms, which for the slower
+          // rates is several times MOVE_WINDOW_MS. The window has to be sized
+          // from the move, not the other way round: a fixed window leaves step
+          // commands still pending when the next event is due, so events fire
+          // late while the plan still claims the original start_ms, and the PC
+          // side slices the wrong audio for every event after the first overrun.
+          uint32_t moveDur = (stepDelay == 0) ? 0 : (uint32_t)distances[d] * stepDelay;
+          uint32_t window  = max(MOVE_WINDOW_MS, moveDur + SETTLE_MS);
+
           if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0])))
             halt("logEvents array full, raise its size", logLen);
-          logEvents[logLen++] = {'P', distances[d], stepDelay, t, MOVE_WINDOW_MS};
+          logEvents[logLen++] = {'P', distances[d], stepDelay, t, window};
 
           if (stepDelay == 0) {
             addCmdAngle(t, target);
@@ -115,8 +125,10 @@ void buildPlan() {
               addCmdAngle(t + i * (uint32_t)stepDelay, a);
             }
           }
-          uint32_t evEnd = t + MOVE_WINDOW_MS + GAP_MS;
-          addCmdAngle(evEnd - 200, HOME_ANGLE); // return home before next event
+          // Return home after the analysis window closes, so the return move's
+          // own noise lands in the gap instead of the segment being measured.
+          addCmdAngle(t + window + SETTLE_MS, HOME_ANGLE);
+          uint32_t evEnd = t + window + GAP_MS;
           t = evEnd;
         }
       }
@@ -137,6 +149,23 @@ void buildPlan() {
     }
   }
   totalDuration = t + 500; // trailing silence
+
+  // loop() walks cmds[] forward only, firing anything whose time has passed, so
+  // a command sitting out of order fires at the wrong moment without any sign
+  // that it did. Claim the ordering rather than assume it survived the maths.
+  for (int i = 1; i < cmdLen; i++) {
+    if (cmds[i].time_ms < cmds[i - 1].time_ms)
+      halt("cmds are not in time order, event windows must be overlapping", i);
+  }
+
+  // Every move must finish inside the window the plan reports for it, or the
+  // PC side measures a segment the servo was still moving through.
+  for (int i = 0; i < logLen; i++) {
+    if (logEvents[i].type != 'P' || logEvents[i].p2 == 0) continue;
+    uint32_t moveDur = (uint32_t)logEvents[i].p1 * logEvents[i].p2;
+    if (moveDur > logEvents[i].dur_ms)
+      halt("a move outlasts its own analysis window", i);
+  }
 }
 
 void printPlanJson() {
