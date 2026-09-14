@@ -45,7 +45,15 @@ const int REPEATS = 3;
 
 const uint32_t MOVE_WINDOW_MS = 700;   // analysis window per event
 const uint32_t GAP_MS         = 900;   // silence between events
-const int HOME_ANGLE          = 90;
+
+// Home sits near one end of travel so HOME_ANGLE + max(distances) stays inside
+// the servo's range. At the old HOME_ANGLE of 90 the three largest distances
+// asked for 180/210/240 deg; everything past 180 is unreachable on a positional
+// servo, so those events commanded nothing and the servo sat still at home while
+// the plan still claimed a move had happened.
+const int HOME_ANGLE      = 15;
+const int SERVO_MIN_ANGLE = 0;
+const int SERVO_MAX_ANGLE = 180;
 
 // Logical events, used only for the JSON plan the PC needs for slicing.
 struct LogEvent { char type; int p1; int p2; uint32_t start_ms; uint32_t dur_ms; };
@@ -62,18 +70,27 @@ Cmd cmds[6000];
 int cmdLen = 0;
 uint32_t totalDuration = 0;
 
-void haltOnOverflow(const char *what) {
-  Serial.printf("FATAL: %s array full — reduce the sweep or bump its size, don't just let it wrap.\n", what);
-  Serial.flush();
-  while (true) delay(1000);
+// Stop dead and say why. A sweep that can't be executed as planned must not
+// record as though it was: a silently-skipped move still produces an event in
+// the plan, and the PC side then reads servo noise that never happened.
+void halt(const char *msg, int value) {
+  while (true) {
+    Serial.printf("FATAL: %s (%d)\n", msg, value);
+    Serial.flush();
+    delay(1000);
+  }
 }
 
 void addCmdAngle(uint32_t t, int angle) {
-  if (cmdLen >= (int)(sizeof(cmds)/sizeof(cmds[0]))) haltOnOverflow("cmds");
+  if (angle < SERVO_MIN_ANGLE || angle > SERVO_MAX_ANGLE)
+    halt("commanded angle outside servo range, sweep would record a move that never happened", angle);
+  if (cmdLen >= (int)(sizeof(cmds)/sizeof(cmds[0])))
+    halt("cmds array full, reduce the sweep or raise its size rather than letting it wrap", cmdLen);
   cmds[cmdLen++] = {t, true, angle, false};
 }
 void addCmdMicros(uint32_t t, int us) {
-  if (cmdLen >= (int)(sizeof(cmds)/sizeof(cmds[0]))) haltOnOverflow("cmds");
+  if (cmdLen >= (int)(sizeof(cmds)/sizeof(cmds[0])))
+    halt("cmds array full, reduce the sweep or raise its size rather than letting it wrap", cmdLen);
   cmds[cmdLen++] = {t, true, us, true};
 }
 
@@ -87,7 +104,8 @@ void buildPlan() {
           int target = HOME_ANGLE + distances[d];
           int stepDelay = stepDelays[s];
 
-          if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0]))) haltOnOverflow("logEvents");
+          if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0])))
+            halt("logEvents array full, raise its size", logLen);
           logEvents[logLen++] = {'P', distances[d], stepDelay, t, MOVE_WINDOW_MS};
 
           if (stepDelay == 0) {
@@ -107,7 +125,8 @@ void buildPlan() {
       for (int s = 0; s < (int)(sizeof(contSpeeds)/sizeof(int)); s++) {
         for (int sign = -1; sign <= 1; sign += 2) {
           int us = 1500 + sign * contSpeeds[s];
-          if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0]))) haltOnOverflow("logEvents");
+          if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0])))
+            halt("logEvents array full, raise its size", logLen);
           logEvents[logLen++] = {'C', sign * contSpeeds[s], 0, t, MOVE_WINDOW_MS + 300};
           addCmdMicros(t, us);
           uint32_t evEnd = t + MOVE_WINDOW_MS + 300 + GAP_MS;
