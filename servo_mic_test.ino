@@ -28,7 +28,14 @@
 #define I2S_SCK   11
 #define SERVO_PIN 8
 
-#define SAMPLE_RATE 16000
+#define VERSION "1.1"
+
+// 16 kHz put Nyquist at 8 kHz, and the first real recording still had servo
+// energy climbing at that edge: +34 dB over room noise in the 6-8 kHz band with
+// no sign of a peak. The spectrum was being cut off rather than captured, so
+// any pitch read off it was a read of the band limit. 32 kHz moves Nyquist to
+// 16 kHz, past where small-servo gear noise runs out.
+#define SAMPLE_RATE 32000
 #define I2S_PORT    I2S_NUM_0
 
 // ---- SET THIS before flashing: which servo type is wired up ----
@@ -169,7 +176,9 @@ void buildPlan() {
 }
 
 void printPlanJson() {
-  Serial.print("{\"sample_rate\":16000,\"events\":[");
+  // Report the rate actually compiled in. Hardcoding it here meant the PC side
+  // could slice a 32 kHz stream as though it were 16 kHz and never know.
+  Serial.printf("{\"sample_rate\":%d,\"events\":[", SAMPLE_RATE);
   for (int i = 0; i < logLen; i++) {
     Serial.printf("{\"i\":%d,\"type\":\"%c\",\"p1\":%d,\"p2\":%d,\"start_ms\":%lu,\"dur_ms\":%lu}%s",
       i, logEvents[i].type, logEvents[i].p1, logEvents[i].p2,
@@ -205,6 +214,10 @@ void i2sInit() {
 void setup() {
   Serial.begin(921600);
   delay(1500);
+
+  Serial.println("=== servo note-scan test v" VERSION " ===");
+  Serial.println("Servo move sweep recorded on an I2S mic: JSON plan, then raw 16-bit PCM");
+  Serial.println("https://github.com/sui001/Servo-notes");
 
   servo.setPeriodHertz(50);
   servo.attach(SERVO_PIN, 1000, 2000);

@@ -57,12 +57,12 @@ def read_plan(ser, timeout_s=20):
     # every slice is an offset from the first audio sample.
     return plan, leftover.lstrip(b"\r\n")
 
-def read_audio(ser, total_ms, prefix=b""):
-    n_samples = int(SAMPLE_RATE * (total_ms / 1000.0)) + SAMPLE_RATE  # pad a second
+def read_audio(ser, total_ms, sr, prefix=b""):
+    n_samples = int(sr * (total_ms / 1000.0)) + sr  # pad a second
     n_bytes = n_samples * 2
     data = bytearray(prefix)
     while len(data) < n_bytes:
-        chunk = ser.read(min(4096, n_bytes - len(data)))
+        chunk = ser.read(min(8192, n_bytes - len(data)))
         if not chunk:
             break
         data += chunk
@@ -70,11 +70,11 @@ def read_audio(ser, total_ms, prefix=b""):
         data = data[:-1]
     return np.frombuffer(bytes(data), dtype="<i2")
 
-def save_wav(path, samples):
+def save_wav(path, samples, sr):
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
-        w.setframerate(SAMPLE_RATE)
+        w.setframerate(sr)
         w.writeframes(samples.tobytes())
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -91,13 +91,60 @@ def nearest_note(freq_hz):
     target_hz = 440.0 * 2 ** ((nearest_midi - 69) / 12.0)
     return f"{name}{octave}", target_hz, cents_off
 
-def detect_pitch(segment, sr=SAMPLE_RATE, fmin=60, fmax=4000):
-    """Plain autocorrelation pitch detector.
-    NOTE: servo whine may be inharmonic/noisy rather than a clean tone —
-    if results look garbage, try band-limiting (a bandpass around where
-    you can hear the zipt) before autocorrelating, or fall back to just
-    taking the FFT peak instead.
+def avg_spectrum(seg, sr, n=4096):
+    """Averaged power spectrum. Returns (freqs, power) or (None, None)."""
+    if len(seg) < n:
+        n = 1 << (len(seg).bit_length() - 1)
+        if n < 256:
+            return None, None
+    win = np.hanning(n)
+    acc = np.zeros(n // 2 + 1)
+    k = 0
+    for i in range(0, len(seg) - n + 1, n // 2):
+        acc += np.abs(np.fft.rfft(seg[i:i + n] * win)) ** 2
+        k += 1
+    if k == 0:
+        return None, None
+    return np.fft.rfftfreq(n, 1 / sr), acc / k
+
+def spectral_stats(segment, sr, lo=500.0):
+    """Describe the segment's spectrum above `lo`.
+
+    peak_hz / centroid_hz say where the energy is; flatness says whether it is
+    a tone or a noise band (near 1.0 = noise-like, below ~0.1 = strongly tonal).
+    This is the honest measure for servo noise: a pitch detector will always
+    return some number, but flatness says whether that number means anything.
     """
+    seg = segment.astype(np.float64)
+    seg -= seg.mean()
+    f, p = avg_spectrum(seg, sr)
+    if f is None:
+        return None, None, None
+    m = (f >= lo) & (f <= sr * 0.47)
+    if not m.any() or p[m].sum() <= 0:
+        return None, None, None
+    fb, pb = f[m], p[m]
+    peak = float(fb[np.argmax(pb)])
+    centroid = float((fb * pb).sum() / pb.sum())
+    pos = pb[pb > 0]
+    flatness = float(np.exp(np.mean(np.log(pos))) / np.mean(pos)) if len(pos) else None
+    return peak, centroid, flatness
+
+def detect_pitch(segment, sr, fmin=60, fmax=None):
+    """Autocorrelation pitch detector.
+
+    Returns (freq, confidence) or (None, 0.0) when there is no usable period.
+
+    A plain argmax over the lag search window always returns something. On
+    broadband noise it returns the lag right next to zero, because that peak is
+    just the signal's high-frequency rolloff, and the peak/zero-lag ratio stays
+    high enough to look like confidence. The first real recording came back with
+    all 108 events reporting one of three frequencies, every one of them sitting
+    on min_lag. So a peak resting on either edge of the search window is
+    reported as no-pitch rather than as a number.
+    """
+    if fmax is None:
+        fmax = sr * 0.45
     seg = segment.astype(np.float64)
     seg -= seg.mean()
     if np.max(np.abs(seg)) < 50:  # near-silence, INMP441 16-bit-ish counts
@@ -105,19 +152,20 @@ def detect_pitch(segment, sr=SAMPLE_RATE, fmin=60, fmax=4000):
     windowed = seg * np.hanning(len(seg))
     corr = np.correlate(windowed, windowed, mode="full")
     corr = corr[len(corr) // 2:]
-    min_lag = int(sr / fmax)
+    min_lag = max(2, int(sr / fmax))
     max_lag = int(sr / fmin)
     if max_lag >= len(corr):
         max_lag = len(corr) - 1
-    if min_lag >= max_lag:
+    if min_lag >= max_lag or corr[0] == 0:
         return None, 0.0
     search = corr[min_lag:max_lag]
-    peak_lag = min_lag + int(np.argmax(search))
-    if corr[0] == 0:
+    peak_off = int(np.argmax(search))
+    peak_lag = min_lag + peak_off
+    # Pinned against either edge means the search window found no interior
+    # peak, so there is no period here to report.
+    if peak_off <= 1 or peak_off >= len(search) - 2:
         return None, 0.0
-    confidence = search.max() / corr[0]
-    freq = sr / peak_lag
-    return freq, confidence
+    return sr / peak_lag, float(search.max() / corr[0])
 
 def main():
     if len(sys.argv) < 3:
@@ -132,24 +180,40 @@ def main():
     plan, leftover = read_plan(ser)
     events = plan["events"]
     total_ms = plan["total_ms"]
+    sr = int(plan.get("sample_rate", SAMPLE_RATE))
     print(f"Got plan: {len(events)} events, {total_ms} ms "
-          f"({total_ms/60000:.1f} min). Recording...", flush=True)
+          f"({total_ms/60000:.1f} min) at {sr} Hz. Recording...", flush=True)
 
-    samples = read_audio(ser, total_ms, prefix=leftover)
+    samples = read_audio(ser, total_ms, sr, prefix=leftover)
+
+    # Every slice is an offset in samples, so a short stream silently shifts
+    # every event after the gap. Say so rather than analysing shifted audio.
+    got_ms = len(samples) / sr * 1000.0
+    if got_ms < total_ms:
+        print(f"WARNING: expected {total_ms} ms of audio, got {got_ms:.0f} ms "
+              f"({total_ms - got_ms:.0f} ms short). Samples were dropped, so "
+              f"event alignment past that point is not trustworthy.", flush=True)
+
     wav_path = f"{prefix}.wav"
-    save_wav(wav_path, samples)
-    print(f"Saved {wav_path} ({len(samples)/SAMPLE_RATE:.1f}s)", flush=True)
+    save_wav(wav_path, samples, sr)
+    print(f"Saved {wav_path} ({len(samples)/sr:.1f}s)", flush=True)
+
+    # Keep the plan next to the audio so the analysis can be re-run later
+    # without re-recording, and without trusting a reconstruction of it.
+    with open(f"{prefix}.plan.json", "w") as f:
+        json.dump(plan, f)
 
     rows = []
     for ev in events:
-        start = int(ev["start_ms"] / 1000.0 * SAMPLE_RATE)
-        dur = int(ev["dur_ms"] / 1000.0 * SAMPLE_RATE)
+        start = int(ev["start_ms"] / 1000.0 * sr)
+        dur = int(ev["dur_ms"] / 1000.0 * sr)
         # Skip the first ~100ms (mechanical onset transient), use the rest.
-        skip = int(0.1 * SAMPLE_RATE)
+        skip = int(0.1 * sr)
         seg = samples[start + skip : start + dur]
         if len(seg) < 256:
             continue
-        freq, conf = detect_pitch(seg)
+        freq, conf = detect_pitch(seg, sr)
+        peak, centroid, flat = spectral_stats(seg, sr)
         note_info = nearest_note(freq) if freq else None
         rows.append({
             "i": ev["i"], "type": ev["type"], "p1": ev["p1"], "p2": ev["p2"],
@@ -157,15 +221,25 @@ def main():
             "confidence": round(conf, 3),
             "note": note_info[0] if note_info else None,
             "cents_off": round(note_info[2], 1) if note_info else None,
+            "peak_hz": round(peak, 1) if peak else None,
+            "centroid_hz": round(centroid, 1) if centroid else None,
+            "flatness": round(flat, 3) if flat else None,
         })
 
     csv_path = f"{prefix}.csv"
+    cols = ["i", "type", "p1", "p2", "freq_hz", "confidence", "note",
+            "cents_off", "peak_hz", "centroid_hz", "flatness"]
     with open(csv_path, "w") as f:
-        f.write("i,type,p1,p2,freq_hz,confidence,note,cents_off\n")
+        f.write(",".join(cols) + "\n")
         for r in rows:
-            f.write(f"{r['i']},{r['type']},{r['p1']},{r['p2']},{r['freq_hz']},"
-                    f"{r['confidence']},{r['note']},{r['cents_off']}\n")
+            f.write(",".join(str(r[c]) for c in cols) + "\n")
     print(f"Saved {csv_path} ({len(rows)} events)", flush=True)
+
+    pitched = sum(1 for r in rows if r["freq_hz"] is not None)
+    flats = [r["flatness"] for r in rows if r["flatness"] is not None]
+    print(f"  {pitched} of {len(rows)} events had a usable period; "
+          f"median flatness {np.median(flats):.3f} "
+          f"(1.0 = noise-like, below 0.1 = strongly tonal)", flush=True)
 
 if __name__ == "__main__":
     main()
