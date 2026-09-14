@@ -53,13 +53,29 @@ LogEvent logEvents[300];
 int logLen = 0;
 
 // Raw hardware commands, purely time-triggered, no blocking.
+// Sized for the worst case: 3 repeats x 9 distances x (3 stepped rates x
+// (distance+2) steps + 1 jump-rate x 2 steps) = ~4986 for the positional
+// sweep as configured below. Bumped with headroom since this silently
+// overflowed into other globals at 2000 and looked like a hardware fault.
 struct Cmd { uint32_t time_ms; bool isServoWrite; int angleOrUs; bool isMicroseconds; };
-Cmd cmds[2000];
+Cmd cmds[6000];
 int cmdLen = 0;
 uint32_t totalDuration = 0;
 
-void addCmdAngle(uint32_t t, int angle)       { cmds[cmdLen++] = {t, true, angle, false}; }
-void addCmdMicros(uint32_t t, int us)         { cmds[cmdLen++] = {t, true, us, true}; }
+void haltOnOverflow(const char *what) {
+  Serial.printf("FATAL: %s array full — reduce the sweep or bump its size, don't just let it wrap.\n", what);
+  Serial.flush();
+  while (true) delay(1000);
+}
+
+void addCmdAngle(uint32_t t, int angle) {
+  if (cmdLen >= (int)(sizeof(cmds)/sizeof(cmds[0]))) haltOnOverflow("cmds");
+  cmds[cmdLen++] = {t, true, angle, false};
+}
+void addCmdMicros(uint32_t t, int us) {
+  if (cmdLen >= (int)(sizeof(cmds)/sizeof(cmds[0]))) haltOnOverflow("cmds");
+  cmds[cmdLen++] = {t, true, us, true};
+}
 
 void buildPlan() {
   uint32_t t = 500; // lead-in silence
@@ -71,6 +87,7 @@ void buildPlan() {
           int target = HOME_ANGLE + distances[d];
           int stepDelay = stepDelays[s];
 
+          if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0]))) haltOnOverflow("logEvents");
           logEvents[logLen++] = {'P', distances[d], stepDelay, t, MOVE_WINDOW_MS};
 
           if (stepDelay == 0) {
@@ -90,6 +107,7 @@ void buildPlan() {
       for (int s = 0; s < (int)(sizeof(contSpeeds)/sizeof(int)); s++) {
         for (int sign = -1; sign <= 1; sign += 2) {
           int us = 1500 + sign * contSpeeds[s];
+          if (logLen >= (int)(sizeof(logEvents)/sizeof(logEvents[0]))) haltOnOverflow("logEvents");
           logEvents[logLen++] = {'C', sign * contSpeeds[s], 0, t, MOVE_WINDOW_MS + 300};
           addCmdMicros(t, us);
           uint32_t evEnd = t + MOVE_WINDOW_MS + 300 + GAP_MS;
