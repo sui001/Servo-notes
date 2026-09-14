@@ -38,6 +38,14 @@
 #define SAMPLE_RATE 32000
 #define I2S_PORT    I2S_NUM_0
 
+// INMP441 gives 24 bits left-justified in a 32-bit slot, so >>8 is the 24-bit
+// value and >>16 is that scaled to 16-bit full scale. This was >>14, four times
+// hotter than full scale, which went unnoticed with the mic 5 cm away and
+// clipped 1.09% of samples across half the events once it moved to 1 cm.
+// Clipping manufactures broadband harmonics, which is indistinguishable from
+// the "is the whine noisy or tonal" answer this rig exists to measure.
+#define MIC_SHIFT 16
+
 // ---- SET THIS before flashing: which servo type is wired up ----
 static const bool TEST_POSITIONAL = true;   // 0-180 deg hobby servo
 static const bool TEST_CONTINUOUS = false;  // continuous-rotation servo
@@ -252,7 +260,15 @@ void loop() {
   int n = bytesRead / sizeof(int32_t);
   if (n > 0) {
     static int16_t out[128];
-    for (int i = 0; i < n; i++) out[i] = (int16_t)(raw[i] >> 14); // INMP441 24-bit-in-32 -> 16-bit
+    for (int i = 0; i < n; i++) {
+      int32_t s = raw[i] >> MIC_SHIFT;
+      // Clamp rather than let the cast wrap: a sample past full scale would
+      // otherwise flip polarity and read as a spike, which looks like noise
+      // in the spectrum instead of looking like the overload it is.
+      if (s >  32767) s =  32767;
+      if (s < -32768) s = -32768;
+      out[i] = (int16_t)s;
+    }
     Serial.write((uint8_t*)out, n * sizeof(int16_t));
   }
 

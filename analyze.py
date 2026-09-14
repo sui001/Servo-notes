@@ -194,9 +194,19 @@ def main():
               f"({total_ms - got_ms:.0f} ms short). Samples were dropped, so "
               f"event alignment past that point is not trustworthy.", flush=True)
 
+    # Clipping fabricates broadband harmonics, which is exactly the thing the
+    # flatness measure is trying to read. A clipped recording has to say so.
+    clipped = int(np.sum(np.abs(samples) >= 32000))
+    if clipped:
+        pct = 100.0 * clipped / max(len(samples), 1)
+        print(f"WARNING: {clipped} samples ({pct:.2f}%) at full scale. The mic is "
+              f"overloading, so tonality and spectrum are not trustworthy. "
+              f"Raise MIC_SHIFT in the firmware or move the mic back.", flush=True)
+
     wav_path = f"{prefix}.wav"
     save_wav(wav_path, samples, sr)
-    print(f"Saved {wav_path} ({len(samples)/sr:.1f}s)", flush=True)
+    print(f"Saved {wav_path} ({len(samples)/sr:.1f}s, peak {int(np.max(np.abs(samples)))}/32767)",
+          flush=True)
 
     # Keep the plan next to the audio so the analysis can be re-run later
     # without re-recording, and without trusting a reconstruction of it.
