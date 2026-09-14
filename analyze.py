@@ -17,30 +17,57 @@ see what real servo-noise recordings look like.
 """
 import sys
 import json
+import time
 import wave
-import struct
 import numpy as np
 import serial
 
 SAMPLE_RATE = 16000
+DELIM = b"===AUDIO_START==="
 
-def read_plan(ser):
+def reset_board(ser):
+    """Pulse the board into a fresh boot.
+
+    The plan is printed once, at boot. Without a reset here the script waits
+    for a delimiter that already went past while it was connecting, and hangs
+    with no output at all.
+    """
+    ser.setDTR(False)
+    ser.setRTS(True)
+    time.sleep(0.1)
+    ser.setRTS(False)
+    time.sleep(0.2)
+
+def read_plan(ser, timeout_s=20):
     buf = b""
-    while b"===AUDIO_START===" not in buf:
-        buf += ser.read(1)
-    header, _, _ = buf.partition(b"===AUDIO_START===\n")
-    plan = json.loads(header.decode("utf-8", errors="replace"))
-    return plan
+    deadline = time.time() + timeout_s
+    while DELIM not in buf:
+        if time.time() > deadline:
+            raise RuntimeError(
+                f"no test plan in {timeout_s}s. Last bytes seen: {buf[-200:]!r}"
+            )
+        buf += ser.read(512)
+    header, _, leftover = buf.partition(DELIM)
+    # The ROM prints its own boot banner before our JSON, so start at the JSON.
+    start = header.find(b'{"sample_rate"')
+    if start < 0:
+        raise RuntimeError(f"no plan JSON in header: {header[-300:]!r}")
+    plan = json.loads(header[start:].decode("utf-8", errors="replace"))
+    # Audio can arrive in the same read as the delimiter. Keeping it matters:
+    # every slice is an offset from the first audio sample.
+    return plan, leftover.lstrip(b"\r\n")
 
-def read_audio(ser, total_ms):
+def read_audio(ser, total_ms, prefix=b""):
     n_samples = int(SAMPLE_RATE * (total_ms / 1000.0)) + SAMPLE_RATE  # pad a second
     n_bytes = n_samples * 2
-    data = bytearray()
+    data = bytearray(prefix)
     while len(data) < n_bytes:
         chunk = ser.read(min(4096, n_bytes - len(data)))
         if not chunk:
             break
         data += chunk
+    if len(data) % 2:  # keep whole samples only
+        data = data[:-1]
     return np.frombuffer(bytes(data), dtype="<i2")
 
 def save_wav(path, samples):
@@ -99,16 +126,19 @@ def main():
     port, prefix = sys.argv[1], sys.argv[2]
 
     ser = serial.Serial(port, 921600, timeout=5)
-    print("Waiting for test plan...")
-    plan = read_plan(ser)
+    print("Resetting board...", flush=True)
+    reset_board(ser)
+    print("Waiting for test plan...", flush=True)
+    plan, leftover = read_plan(ser)
     events = plan["events"]
     total_ms = plan["total_ms"]
-    print(f"Got plan: {len(events)} events, {total_ms} ms total. Recording...")
+    print(f"Got plan: {len(events)} events, {total_ms} ms "
+          f"({total_ms/60000:.1f} min). Recording...", flush=True)
 
-    samples = read_audio(ser, total_ms)
+    samples = read_audio(ser, total_ms, prefix=leftover)
     wav_path = f"{prefix}.wav"
     save_wav(wav_path, samples)
-    print(f"Saved {wav_path} ({len(samples)/SAMPLE_RATE:.1f}s)")
+    print(f"Saved {wav_path} ({len(samples)/SAMPLE_RATE:.1f}s)", flush=True)
 
     rows = []
     for ev in events:
@@ -135,7 +165,7 @@ def main():
         for r in rows:
             f.write(f"{r['i']},{r['type']},{r['p1']},{r['p2']},{r['freq_hz']},"
                     f"{r['confidence']},{r['note']},{r['cents_off']}\n")
-    print(f"Saved {csv_path} ({len(rows)} events)")
+    print(f"Saved {csv_path} ({len(rows)} events)", flush=True)
 
 if __name__ == "__main__":
     main()
